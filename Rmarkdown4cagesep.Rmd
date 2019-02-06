@@ -1,0 +1,160 @@
+---
+title: "CageSepExpt"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+
+
+```{r change to directory, echo = T}
+mywd = "C:/Users/dobbinke/Desktop/Git/MandiMurphPaper/Replies2Ref/Rmarkdown"
+setwd(mywd)
+
+require("knitr")
+
+x = read.table("KKDrecoding.txt",header=T)
+
+x
+
+numberpercage = rep(NA,34);
+for (i in 1:34) {
+  numberpercage[i] = length(which(x$OriginalCageID==i))
+}
+numberpercage;
+sum(numberpercage);
+
+sepspercage = rep(NA,34);
+for (i in 1:34) {
+  sepspercage[i] = sum(x$separatedyn[which(x$OriginalCageID==i)]);
+}
+rbind(numberpercage,sepspercage);
+```
+
+Randomization model approach
+
+```{r randomization model approach}
+
+nattest = sepspercage/(numberpercage-1);
+
+rbind(numberpercage,sepspercage,nattest)
+
+groupfac = factor(c(rep(1,4),rep(2,3),rep(3,4),rep(4,3),rep(0,20)))
+
+groupfac
+
+myanova = anova(lm(nattest ~ groupfac))
+
+myanova
+
+
+```
+
+
+Now for the permuation test
+
+```{r}
+
+nperms = 1e3;
+Fstats = rep(NA,nperms);
+for (i in 1:nperms) {
+  thisfac = sample(groupfac,length(groupfac),replace=F);
+  thisanova = anova(lm(nattest ~ thisfac));
+  Fstats[i] = thisanova[1,4]
+}
+
+
+length(which(Fstats>3.7164))/length(Fstats)
+hist(Fstats,xlim=c(0,10),xlab="Permutation F statistics",breaks=50);
+abline(v=3.7164)
+legend("topright","Vertical line is observed F statistic")
+
+
+```
+
+
+```{r population approach}
+for (i in 1:34) {
+  if (sepspercage[i]==(numberpercage[i]-1)) 
+  {
+    sepspercage[i] = numberpercage[i];
+  }
+}
+rbind(numberpercage,sepspercage);
+
+propseppercage = rep(NA,34);
+for (i in 1:34) {
+    propseppercage[i] = sepspercage[i]/numberpercage[i];
+}
+propseppercage
+rbind(numberpercage,sepspercage,propseppercage,groupfac);
+
+
+myanova = anova(aov(propseppercage ~ groupfac));
+
+print(myanova)
+
+myFstat = myanova[1,4]
+
+print(myFstat)
+
+mean(propseppercage[which(groupfac==0)]);
+mean(propseppercage[which(groupfac==1)]);
+mean(propseppercage[which(groupfac==2)]);
+mean(propseppercage[which(groupfac==3)]);
+mean(propseppercage[which(groupfac==4)]);
+
+
+```
+
+
+Now for the Kruskal Wallis test.
+
+
+```{r Kruskal Wallis test}
+
+
+mykw = kruskal.test(propseppercage ~ groupfac)
+mykw
+
+
+
+```
+
+```{r Dunnett test}
+
+library(multcomp)
+
+
+mydf = data.frame(propseppercage,groupfac);
+
+
+
+myaov = aov(propseppercage ~ groupfac, mydf);
+
+mydun = glht(myaov, linfct=mcp(groupfac="Dunnett"))
+
+summary(mydun)
+
+
+
+
+
+```
+```{r generalized estimating equation}
+
+
+# GEE did not converge
+
+
+
+```
+
+
+
